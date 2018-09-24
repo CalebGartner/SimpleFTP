@@ -2,15 +2,14 @@
 
 import socket
 
-HOST = 'local_host'
-PORT = 9500
+HOST = '127.0.0.1'
+PORT = 64000
 
 
 class Client:
 
     @staticmethod
     def startup(file_name: str):
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        with socket.socket() as s, open(file_name, 'rb') as binary_data:
             s.connect((HOST, PORT))
-            with open(file_name, 'rb') as binary_data:
-                s.sendfile(binary_data)  # buffer size is heuristically determined based on FILE
+            s.sendfile(binary_data)  # buffer size is heuristically determined based on FILE
