@@ -1,7 +1,4 @@
 #!/usr/bin/env python3
-# TODO calculate checksum at beginning and end to verify integrity
-# TODO use jpg/png file instead
-# TODO make host/port/file configurable
 
 
 import socket
@@ -12,7 +9,7 @@ BUFFER_SIZE = 1024  # bytes
 
 
 # uses TCP by default, uses binary encoding by default
-class SimpleServer:  # not really a server, just a listener on a port
+class SimpleServer:
 
     @staticmethod
     def startup(file_name: str):
@@ -29,6 +26,6 @@ class SimpleServer:  # not really a server, just a listener on a port
                         if not data: break
                         file_copy.write(data)
 
-        except Exception as err:  # oof ouch
+        except Exception as err:  # oof ouch - # TODO should catch OSError-type exceptions instead
             print(f"server: start: error: {err}")
 

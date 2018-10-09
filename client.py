@@ -6,7 +6,7 @@ HOST = '127.0.0.1'
 PORT = 64000
 
 
-class Client:
+class SimpleClient:
 
     @staticmethod
     def startup(file_name: str):
