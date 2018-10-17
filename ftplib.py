@@ -4,7 +4,7 @@ import json
 import struct
 import hashlib
 from types import SimpleNamespace
-from typing import Dict, Union
+from typing import Dict, Union, Sized, SupportsBytes
 
 # Library for implementing any of the necessary File Transfer Protocols used to transfer the binary file.
 # Binary File Transfer Protocol:
@@ -32,12 +32,21 @@ from typing import Dict, Union
 HOST, PORT = '127.0.0.1', 64000  # defaults
 BUFFER_SIZE = 4096
 PROTO_HEADER_LENGTH = 2  # bytes
-ENCODING = 'utf-8'
+ENCODING: str = 'utf-8'
 REQUIRED_HEADERS = {'byteorder', 'content-length', 'action'}  # change these to enum/namedtuple/etc.
 ACTIONS = {'START-REQUEST', 'END-REQUEST', 'CONFIRM', 'RECEIVE'}  # add RESEND/REPEAT action if verification fails?
 
+ENCODER = json.JSONEncoder(ensure_ascii=False, skipkeys=True)
+DECODER = json.JSONDecoder()
+
 
 class PacketData(SimpleNamespace):
+
+    checksum: str
+    header: Dict
+    header_len: int
+    content: bytearray
+    buffer: bytearray
 
     def __init__(self):
         super(PacketData, self).__init__()
@@ -62,7 +71,7 @@ def process_proto_header(packet: PacketData):
 
 def process_header(packet: PacketData):
     if len(packet.buffer) >= packet.header_len:
-        packet.header = decode(packet.buffer[:packet.header_len])
+        packet.header = decode_header(packet.buffer[:packet.header_len])
         if any(hdr not in packet.header for hdr in REQUIRED_HEADERS):
             raise ValueError("invalid packet: missing required header")
         if packet.header['action'] not in ACTIONS:
@@ -91,18 +100,18 @@ def process_packet(packet: PacketData):
             process_content(packet)
 
 
-def encode(packet_data):
-    return json.dumps(packet_data, ensure_ascii=False).encode(ENCODING)
+def encode_header(packet_data: Dict) -> bytes:
+    return json.dumps(packet_data, ensure_ascii=False).encode(encoding=ENCODING)
 
 
-def decode(packet_data):
-    tiow = io.TextIOWrapper(io.BytesIO(packet_data), encoding=ENCODING, newline='')  # is this necessary?
-    header = json.load(tiow)  # why can't I call load on ftp_packet_header directly? . . .
-    tiow.close()
-    return header
+def decode_header(packet_data: Union[bytes, bytearray]) -> Dict:
+    return json.loads(packet_data)
 
 
-def create_packet(packet_content: Union[bytes, bytearray], action: str, additional_headers: Dict = None):
+def create_packet(packet_content: Union[bytes, bytearray, str], action: str, additional_headers: Dict = None):
+    if isinstance(packet_content, str):
+        packet_content = packet_content.encode(encoding=ENCODING)
+
     header = {
         "byteorder": sys.byteorder,  # remove/specify '>' (big-endian)?
         "action": action,
@@ -110,7 +119,7 @@ def create_packet(packet_content: Union[bytes, bytearray], action: str, addition
     }
     if additional_headers is not None:
         header.update(additional_headers)
-    packet_header = encode(header)
+    packet_header = encode_header(header)
     proto_header = struct.pack(">H", len(packet_header))
     message = proto_header + packet_header + packet_content
     return message

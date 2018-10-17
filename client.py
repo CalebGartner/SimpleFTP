@@ -4,7 +4,7 @@ import sys
 import socket
 
 import ftplib
-FILE: str = 'test.png'  # default
+FILE: str = "test.png"  # default
 # TODO make host/port/file configurable
 
 
@@ -20,7 +20,7 @@ class SimpleFTPClient:
             # sock.setblocking(False)
             # Connect to server and send file request
             sock.connect((host_address, port))
-            ftp_request = ftplib.create_packet(bytes(FILE), action='START-REQUEST')
+            ftp_request = ftplib.create_packet(FILE, action='START-REQUEST')
             sock.send(ftp_request)
             while True:
                 try:  # Receive data from the server and send packet confirmation once entire packet is received
@@ -29,14 +29,14 @@ class SimpleFTPClient:
                     pass
                 else:
                     if data:  # non-zero number of bytes were received
-                        self.packet.buffer.append(data)
+                        self.packet.buffer += data
                         ftplib.process_packet(self.packet)
 
                         if self.packet.content is not None:
                             action = self.packet.header['action']
 
                             if action == 'RECEIVE':  # process received file data
-                                with open(FILE, 'ab') as f:
+                                with open(FILE, 'ab', encoding=ftplib.ENCODING) as f:
                                     f.write(self.packet.content)
                                 checksum = ftplib.packet_md5sum(self.packet.content)
                                 confirmation_packet = ftplib.create_packet(checksum, action='CONFIRM')
@@ -45,7 +45,7 @@ class SimpleFTPClient:
 
                             elif action == 'END-REQUEST':  # verify checksum and exit loop
                                 file_checksum = ftplib.file_md5sum(FILE)
-                                if file_checksum == ftplib.decode(self.packet.content):
+                                if file_checksum == ftplib.decode_header(self.packet.content):
                                     print(f"success! '{FILE}' has been transferred without incident")
                                     break
                                 else:

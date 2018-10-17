@@ -9,6 +9,12 @@ import ftplib
 # Server sends binary file specified by client upon request
 class BinaryFTPServer:
 
+    request: socket
+    client_address: int
+    _awaiting_confirmation: bool
+    _file_offset: int
+    _requested_file: str
+
     def __init__(self):
         self.request = None
         self.client_address = None
@@ -36,7 +42,7 @@ class BinaryFTPServer:
                             pass
                         else:
                             if data:
-                                self.packet.buffer.append(data)
+                                self.packet.buffer += data
                                 ftplib.process_packet(self.packet)
 
                                 if self.packet.content is not None:
@@ -45,14 +51,14 @@ class BinaryFTPServer:
                                     if self._requested_file is None:  # process initial client request
                                         if action == 'START-REQUEST':
                                             # cast to str? or use bytearray.decode() func?
-                                            self._requested_file = ftplib.decode(self.packet.content)
+                                            self._requested_file = self.packet.content.decode()
                                             self.packet.reset()
                                         else:
                                             raise ValueError('invalid packet: no file has been requested')
 
                                     elif self._awaiting_confirmation:  # process client confirmation packet
                                         if action == 'CONFIRM':
-                                            if self.packet.checksum != ftplib.decode(self.packet.content):
+                                            if self.packet.checksum != self.packet.content.decode():
                                                 raise ValueError('corrupted packet: mismatched checksum detected')
                                             self._awaiting_confirmation = False  # send next packet w/binary file data . . .
                                             self.packet.reset()
