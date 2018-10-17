@@ -3,7 +3,6 @@
 import socketserver
 import ftplib
 # TODO --bind and --directory options (https://docs.python.org/3/library/http.server.html) ?
-# TODO handles endian-ness conversion - sys.byteorder?
 # TODO handle OSErrors
 
 

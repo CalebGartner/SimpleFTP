@@ -3,7 +3,6 @@
 import server
 import client
 
-# TODO calculate checksum at beginning and end to verify integrity - send in header?
 # TODO use jpg/png file instead
 # TODO make host/port/file configurable
 
@@ -15,9 +14,7 @@ import client
 # The server waits for a connection, processes the client’s request message, and then sends a response message
 
 
-def main():
-    pass
-
-
 if __name__ == '__main__':
-    main()
+    server.BinaryFTPServer()
+    client.FILE = 'test.png'
+    client.SimpleFTPClient()
