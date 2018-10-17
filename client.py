@@ -4,18 +4,20 @@ import sys
 import socket
 
 import ftplib
-FILE: str = None
+FILE: str = 'test.png'  # default
+# TODO make host/port/file configurable
 
 
 # Client initiates file request from server
 class SimpleFTPClient:
 
-    def __init__(self, host_address=ftplib.HOST, port=ftplib.PORT):
+    def __init__(self):
         self.packet = ftplib.PacketData()
 
+    def startup(self, host_address=ftplib.HOST, port=ftplib.PORT):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            sock.setblocking(False)
+            # sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            # sock.setblocking(False)
             # Connect to server and send file request
             sock.connect((host_address, port))
             ftp_request = ftplib.create_packet(bytes(FILE), action='START-REQUEST')
@@ -54,5 +56,5 @@ class SimpleFTPClient:
 
 if __name__ == '__main__':
     # TODO parse args for file name, host, and port - use host/port from transfer.main?
-    FILE = sys.argv[1:]  # TODO move to main? parse other args . . .
-    SimpleFTPClient()
+    # FILE = sys.argv[1:]  # TODO move to main? parse other args . . .
+    SimpleFTPClient().startup()
