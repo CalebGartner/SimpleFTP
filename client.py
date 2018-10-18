@@ -4,14 +4,13 @@ import os
 import socket
 
 import ftplib
-FILE: str = "test.png"  # default - remove/move to ftplib ?
 DIR = os.path.dirname(os.path.abspath(__file__))  # default
-# TODO make host/port/file configurable - optparse module
-# TODO move code if possible to ftplib
+FILE: str = "test.png"  # default - remove/move to ftplib ?
+# TODO make host/port/file configurable - opt/argparse module
 
 
 # Client initiates file request from server
-class SimpleFTPClient:
+class BinaryFTPClient:
 
     _socket: socket
 
@@ -21,8 +20,9 @@ class SimpleFTPClient:
 
     def startup(self, host_address=ftplib.HOST, port=ftplib.PORT):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as self._socket:
-            # Connect to server and send file request
-            self._socket.connect((host_address, port))
+            self._socket.connect((host_address, port))  # Connect to server and send file request
+
+            # TODO check if specified file already exists in DIR
             ftp_request = ftplib.create_packet(FILE, action=ftplib.ACTIONS.START_REQUEST)
             self._socket.send(ftp_request)
             while True:
@@ -40,12 +40,11 @@ class SimpleFTPClient:
 
                             if action == ftplib.ACTIONS.RECEIVE:  # process received file data
                                 self.do_RECEIVE()
-
                             elif action == ftplib.ACTIONS.END_REQUEST:  # verify file checksum and exit
                                 self.do_END_REQUEST()
                                 break
                             else:
-                                raise ValueError(f"invalid packet: invalid action '{action}' specified for client")
+                                raise ValueError(f"invalid action '{action}' specified for client")
 
     def do_RECEIVE(self):  # TODO once received dir is specified, copy to dir
         with open(os.path.join(DIR, 'copy_of_' + FILE), 'ab') as f:  # append received data to file
@@ -67,4 +66,4 @@ class SimpleFTPClient:
 
 if __name__ == '__main__':
     # TODO parse args for file name, host, and port
-    SimpleFTPClient().startup()
+    BinaryFTPClient().startup()
