@@ -26,7 +26,6 @@ class BinaryFTPServer:
 
     def startup(self, host_address=ftplib.HOST, port=ftplib.PORT):  # Default: host_address='localhost', port=64000
         self.packet = ftplib.PacketData()
-        # Create the server, binding to 'host_address' on 'port'
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
             sock.bind((host_address, port))
             sock.listen()
@@ -48,15 +47,15 @@ class BinaryFTPServer:
                                 if self.packet.content is not None:
                                     action = self.packet.header[ftplib.HEADERS.ACTION]
 
-                                    if self._requested_file is None:  # process initial client request
-                                        if action == ftplib.ACTIONS.START_REQUEST:  # TODO switch with above if stmt
+                                    if action == ftplib.ACTIONS.START_REQUEST:  # process initial client request
+                                        if self._requested_file is None:
                                             self._requested_file = ftplib.decode(self.packet.content)
                                             self.packet.reset()
                                         else:
-                                            raise ValueError('invalid packet: no file has been requested')
+                                            raise ValueError('invalid packet: file has already been requested')
 
-                                    elif self._awaiting_confirmation:  # process client confirmation packet
-                                        if action == ftplib.ACTIONS.CONFIRM:
+                                    elif action == ftplib.ACTIONS.CONFIRM:  # process client confirmation packet
+                                        if self._awaiting_confirmation:
                                             if self.packet.checksum != ftplib.decode(self.packet.content):
                                                 raise ValueError('corrupted packet: mismatched checksum detected')
                                             self._awaiting_confirmation = False  # send next packet w/file data . . .
@@ -64,7 +63,7 @@ class BinaryFTPServer:
                                         else:
                                             raise ValueError('invalid packet: no verification has been requested')
                             else:
-                                raise RuntimeError('No FTP packet sent from client')  # necessary?
+                                raise RuntimeError('No FTP packet sent from client')
 
                     # Wait for confirmation before sending next FTP packet
                     if self._requested_file is not None and not self._awaiting_confirmation:
@@ -78,11 +77,10 @@ class BinaryFTPServer:
                             file_checksum = ftplib.file_md5sum(self._requested_file)
                             ftp_end_packet = ftplib.create_packet(file_checksum, action=ftplib.ACTIONS.END_REQUEST)
                             print(f"All '{self._requested_file}' data sent to client; shutting down . . .")
-                            sock.close()
                             self._file_offset = 0
                             self._requested_file = None
-                            self._awaiting_confirmation = False
                             self.request.send(ftp_end_packet)
+                            self._awaiting_confirmation = False
                             break
                         else:  # file data remains, send next packet - 'RECEIVE'
                             self.packet.checksum = ftplib.packet_md5sum(file_data)
