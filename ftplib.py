@@ -1,10 +1,12 @@
-import io
+import os
 import sys
 import json
 import struct
 import hashlib
+
+from collections import namedtuple
 from types import SimpleNamespace
-from typing import Dict, Union, Sized, SupportsBytes
+from typing import Dict, Union
 
 # Library for implementing any of the necessary File Transfer Protocols used to transfer the binary file.
 # Binary File Transfer Protocol:
@@ -28,20 +30,21 @@ from typing import Dict, Union, Sized, SupportsBytes
 # The client initiates the connection and sends a request message, followed by processing the server’s response message.
 # The server waits for a connection, processes the client’s request message, and then sends a response message
 
-
 HOST, PORT = '127.0.0.1', 64000  # defaults
 BUFFER_SIZE = 4096
 PROTO_HEADER_LENGTH = 2  # bytes
-ENCODING: str = 'utf-8'
-REQUIRED_HEADERS = {'byteorder', 'content-length', 'action'}  # change these to enum/namedtuple/etc.
-ACTIONS = {'START-REQUEST', 'END-REQUEST', 'CONFIRM', 'RECEIVE'}  # add RESEND/REPEAT action if verification fails?
+ENCODING = 'utf-8'
 
-ENCODER = json.JSONEncoder(ensure_ascii=False, skipkeys=True)
-DECODER = json.JSONDecoder()
+_actions = namedtuple('_ACTIONS_', ['START_REQUEST', 'END_REQUEST', 'CONFIRM', 'RECEIVE'])
+ACTIONS = _actions('START-REQUEST', 'END-REQUEST', 'CONFIRM', 'RECEIVE')
+
+_headers = namedtuple('_HEADERS_', ['BYTEORDER', 'CONTENT_LEN', 'ACTION'])
+HEADERS = _headers('byteorder', 'content-length', 'action')
+
+DIR = os.path.dirname(os.path.abspath(__file__))  # the server file being transferred must be in the same dir as ftplib
 
 
 class PacketData(SimpleNamespace):
-
     checksum: str
     header: Dict
     header_len: int
@@ -71,16 +74,16 @@ def process_proto_header(packet: PacketData):
 
 def process_header(packet: PacketData):
     if len(packet.buffer) >= packet.header_len:
-        packet.header = decode_header(packet.buffer[:packet.header_len])
-        if any(hdr not in packet.header for hdr in REQUIRED_HEADERS):
+        packet.header = decode(packet.buffer[:packet.header_len])
+        if any(hdr not in packet.header for hdr in HEADERS):
             raise ValueError("invalid packet: missing required header")
         if packet.header['action'] not in ACTIONS:
-            raise ValueError(f"invalid packet: invalid action specification '{packet.header['action']}'")
+            raise ValueError(f"invalid packet: invalid action specification '{packet.header[HEADERS.ACTION]}'")
         packet.buffer = packet.buffer[packet.header_len:]
 
 
 def process_content(packet: PacketData):
-    content_len = packet.header['content-length']
+    content_len = packet.header[HEADERS.CONTENT_LEN]
     if len(packet.buffer) < content_len:
         return
     packet.content = packet.buffer[:content_len]
@@ -100,26 +103,26 @@ def process_packet(packet: PacketData):
             process_content(packet)
 
 
-def encode_header(packet_data: Dict) -> bytes:
+def encode(packet_data: Union[Dict, str]) -> bytes:
     return json.dumps(packet_data, ensure_ascii=False).encode(encoding=ENCODING)
 
 
-def decode_header(packet_data: Union[bytes, bytearray]) -> Dict:
-    return json.loads(packet_data)
+def decode(packet_data: Union[bytes, bytearray]) -> Dict:
+    return json.loads(packet_data.decode(encoding=ENCODING))
 
 
 def create_packet(packet_content: Union[bytes, bytearray, str], action: str, additional_headers: Dict = None):
-    if isinstance(packet_content, str):
-        packet_content = packet_content.encode(encoding=ENCODING)
+    if not isinstance(packet_content, (bytes, bytearray)):
+        packet_content = encode(packet_content)
 
-    header = {
-        "byteorder": sys.byteorder,  # remove/specify '>' (big-endian)?
-        "action": action,
-        "content-length": len(packet_content)
-    }
+    header = {HEADERS.BYTEORDER: sys.byteorder,  # remove/specify '>' ? - parse/convert to client sys.byteorder ?
+              HEADERS.ACTION: action,
+              HEADERS.CONTENT_LEN: len(packet_content)}
+
     if additional_headers is not None:
         header.update(additional_headers)
-    packet_header = encode_header(header)
+
+    packet_header = encode(header)
     proto_header = struct.pack(">H", len(packet_header))
     message = proto_header + packet_header + packet_content
     return message
@@ -131,7 +134,7 @@ def packet_md5sum(data: Union[bytes, bytearray]):
 
 def file_md5sum(filename: str):
     hash_md5 = hashlib.md5()
-    with open(filename, "rb") as f:
+    with open(os.path.join(DIR, filename), 'rb') as f:
         for chunk in iter(lambda: f.read(4096), b""):
             hash_md5.update(chunk)
     return hash_md5.hexdigest()
