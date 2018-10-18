@@ -5,9 +5,9 @@ import socket
 
 import ftplib
 FILE: str = "test.png"  # default - remove/move to ftplib ?
+DIR = os.path.dirname(os.path.abspath(__file__))  # default
 # TODO make host/port/file configurable - optparse module
 # TODO move code if possible to ftplib
-# TODO move test.png to 'content'/whatever folder
 
 
 # Client initiates file request from server
@@ -41,14 +41,14 @@ class SimpleFTPClient:
                             if action == ftplib.ACTIONS.RECEIVE:  # process received file data
                                 self.do_RECEIVE()
 
-                            elif action == ftplib.ACTIONS.END_REQUEST:  # verify file checksum and exit loop
-                                self.do_CONFIRM()
+                            elif action == ftplib.ACTIONS.END_REQUEST:  # verify file checksum and exit
+                                self.do_END_REQUEST()
                                 break
                             else:
                                 raise ValueError(f"invalid packet: invalid action '{action}' specified for client")
 
-    def do_RECEIVE(self):  # change to CONFIRM, remove RECEIVE entirely?
-        with open(os.path.join(ftplib.DIR, 'copy_of_' + FILE), 'ab') as f:  # append received data to file client-side
+    def do_RECEIVE(self):  # TODO once received dir is specified, copy to dir
+        with open(os.path.join(DIR, 'copy_of_' + FILE), 'ab') as f:  # append received data to file
             f.write(self.packet.content)
 
         checksum = ftplib.packet_md5sum(self.packet.content)
@@ -57,7 +57,7 @@ class SimpleFTPClient:
 
         self.packet.reset()
 
-    def do_CONFIRM(self):
+    def do_END_REQUEST(self):
         file_checksum = ftplib.file_md5sum(FILE)
         if file_checksum == ftplib.decode(self.packet.content):
             print(f"Success! '{FILE}' has been transferred without incident . . .")

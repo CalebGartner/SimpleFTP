@@ -33,7 +33,7 @@ class FTPLibraryTestCase(unittest.TestCase):
         self.assertEqual(self.packet.header['action'], self.action)
 
     def test_start_packet(self):
-        self.action = "START-REQUEST"
+        self.action = ftplib.ACTIONS.START_REQUEST
         ftp_start_request = ftplib.create_packet(self.filename, self.action)
         self.packet_testing(ftp_start_request)
 
@@ -42,7 +42,7 @@ class FTPLibraryTestCase(unittest.TestCase):
         self.assertEqual('test.png', ftplib.decode(self.packet.content))
 
     def test_end_packet(self):
-        self.action = "END-REQUEST"
+        self.action = ftplib.ACTIONS.END_REQUEST
         file_md5sum = ftplib.file_md5sum(self.filename)
         ftp_end_request = ftplib.create_packet(file_md5sum, self.action)
         self.packet_testing(ftp_end_request)
@@ -50,8 +50,8 @@ class FTPLibraryTestCase(unittest.TestCase):
         self.assertEqual(file_md5sum, ftplib.decode(self.packet.content))
 
     def test_confirm_and_receive(self):
-        self.action = "RECEIVE"
-        with open(os.path.join(ftplib.DIR, self.filename), 'rb') as f:
+        self.action = ftplib.ACTIONS.RECEIVE
+        with open(os.path.join(ftplib.CONTENT_DIR, self.filename), 'rb') as f:
             f.seek(0)  # beginning of file
             file_data = f.read(ftplib.BUFFER_SIZE - ftplib.PROTO_HEADER_LENGTH)
             file_offset = f.tell()
@@ -69,7 +69,7 @@ class FTPLibraryTestCase(unittest.TestCase):
         self.assertEqual(packet_md5sum, self.packet.checksum)
 
         self.setUp()
-        self.action = "CONFIRM"
+        self.action = ftplib.ACTIONS.CONFIRM
         ftp_confirm = ftplib.create_packet(packet_md5sum, self.action)
         self.packet_testing(ftp_confirm)
 

@@ -69,7 +69,7 @@ class BinaryFTPServer:
                     # Wait for confirmation before sending next FTP packet
                     if self._requested_file is not None and not self._awaiting_confirmation:
                         # TODO extract method into read_file_chunk() ?
-                        with open(os.path.join(ftplib.DIR, self._requested_file), 'rb') as f:
+                        with open(os.path.join(ftplib.CONTENT_DIR, self._requested_file), 'rb') as f:
                             f.seek(self._file_offset)
                             file_data = f.read(ftplib.BUFFER_SIZE - ftplib.PROTO_HEADER_LENGTH)
                             self._file_offset = f.tell()

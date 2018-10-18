@@ -4,9 +4,9 @@ import json
 import struct
 import hashlib
 
-from collections import namedtuple
-from types import SimpleNamespace
 from typing import Dict, Union
+from types import SimpleNamespace
+from collections import namedtuple
 
 # Library for implementing any of the necessary File Transfer Protocols used to transfer the binary file.
 # Binary File Transfer Protocol:
@@ -34,14 +34,13 @@ HOST, PORT = '127.0.0.1', 64000  # defaults
 BUFFER_SIZE = 4096
 PROTO_HEADER_LENGTH = 2  # bytes
 ENCODING = 'utf-8'
+CONTENT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'content')
 
 _actions = namedtuple('_ACTIONS_', ['START_REQUEST', 'END_REQUEST', 'CONFIRM', 'RECEIVE'])
 ACTIONS = _actions('START-REQUEST', 'END-REQUEST', 'CONFIRM', 'RECEIVE')
 
 _headers = namedtuple('_HEADERS_', ['BYTEORDER', 'CONTENT_LEN', 'ACTION'])
 HEADERS = _headers('byteorder', 'content-length', 'action')
-
-DIR = os.path.dirname(os.path.abspath(__file__))  # the server file being transferred must be in the same dir as ftplib
 
 
 class PacketData(SimpleNamespace):
@@ -134,7 +133,7 @@ def packet_md5sum(data: Union[bytes, bytearray]):
 
 def file_md5sum(filename: str):
     hash_md5 = hashlib.md5()
-    with open(os.path.join(DIR, filename), 'rb') as f:
+    with open(os.path.join(CONTENT_DIR, filename), 'rb') as f:
         for chunk in iter(lambda: f.read(4096), b""):
             hash_md5.update(chunk)
     return hash_md5.hexdigest()
