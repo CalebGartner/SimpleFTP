@@ -9,8 +9,7 @@ FILE: str = "test.png"  # default - remove/move to ftplib ?
 # TODO make host/port/file configurable - opt/argparse module
 
 
-# Client initiates file request from server
-class BinaryFTPClient:
+class BinaryFTPClient:  # Client initiates file request from server
 
     _socket: socket
 
@@ -31,23 +30,23 @@ class BinaryFTPClient:
                 except BlockingIOError:
                     pass
                 else:
-                    if data:  # non-zero number of bytes were received
+                    if data:  # Non-zero number of bytes were received
                         self.packet.buffer += data
                         ftplib.process_packet(self.packet)
 
                         if self.packet.content is not None:
                             action = self.packet.header[ftplib.HEADERS.ACTION]
 
-                            if action == ftplib.ACTIONS.RECEIVE:  # process received file data
+                            if action == ftplib.ACTIONS.RECEIVE:  # Process received file data
                                 self.do_RECEIVE()
-                            elif action == ftplib.ACTIONS.END_REQUEST:  # verify file checksum and exit
+                            elif action == ftplib.ACTIONS.END_REQUEST:  # Verify file checksum and exit
                                 self.do_END_REQUEST()
                                 break
                             else:
                                 raise ValueError(f"invalid action '{action}' specified for client")
 
     def do_RECEIVE(self):  # TODO once received dir is specified, copy to dir
-        with open(os.path.join(DIR, 'copy_of_' + FILE), 'ab') as f:  # append received data to file
+        with open(os.path.join(DIR, 'copy_of_' + FILE), 'ab') as f:  # Append received data to file
             f.write(self.packet.content)
 
         checksum = ftplib.packet_md5sum(self.packet.content)

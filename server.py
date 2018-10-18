@@ -6,8 +6,7 @@ import socket
 import ftplib
 
 
-# Server sends binary file specified by client upon request
-class BinaryFTPServer:
+class BinaryFTPServer:  # Server sends binary file specified by client upon request
 
     packet: ftplib.PacketData
     request: socket
@@ -34,7 +33,7 @@ class BinaryFTPServer:
             with self.request:
                 print("Connected by: ", self.client_address)
                 while True:
-                    if self._awaiting_confirmation or self._requested_file is None:  # need to recv data from client
+                    if self._awaiting_confirmation or self._requested_file is None:  # Need to recv data from client
                         try:
                             data = self.request.recv(ftplib.BUFFER_SIZE)
                         except BlockingIOError:
@@ -47,9 +46,9 @@ class BinaryFTPServer:
                                 if self.packet.content is not None:
                                     action = self.packet.header[ftplib.HEADERS.ACTION]
 
-                                    if action == ftplib.ACTIONS.START_REQUEST:  # process initial client request
+                                    if action == ftplib.ACTIONS.START_REQUEST:  # Process initial client request
                                         self.do_START_REQUEST()
-                                    elif action == ftplib.ACTIONS.CONFIRM:  # process client confirmation packet
+                                    elif action == ftplib.ACTIONS.CONFIRM:  # Process client confirmation packet
                                         self.do_CONFIRM()
                                     else:
                                         raise ValueError(f"invalid action '{action}' specified for server")
@@ -60,10 +59,10 @@ class BinaryFTPServer:
                     if self._requested_file is not None and not self._awaiting_confirmation:
                         file_data = self._read_file()
 
-                        if not file_data:  # no data left, server has met EOF - 'END-REQUEST'
+                        if not file_data:  # No data left, server has met EOF - 'END-REQUEST'
                             self.do_END_REQUEST()
                             break
-                        else:  # file data remains, send it in the next packet - 'RECEIVE'
+                        else:  # Data remains, send it in the next packet - 'RECEIVE'
                             self.do_RECEIVE(file_data)
 
     def do_START_REQUEST(self):
