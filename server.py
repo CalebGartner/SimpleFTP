@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.6
 
 import os
 import socket
@@ -25,7 +25,7 @@ class BinaryFTPServer:  # Server sends binary file specified by client upon requ
 
     def startup(self, host_address=ftplib.HOST, port=ftplib.PORT):  # Default: host_address='localhost', port=64000
         self.packet = ftplib.PacketData()
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:  # TODO move to init, call sock/self.request close() in __delete__ ?
             sock.bind((host_address, port))
             sock.listen()
             print("listening . . .")
@@ -62,12 +62,15 @@ class BinaryFTPServer:  # Server sends binary file specified by client upon requ
                         if not file_data:  # No data left, server has met EOF - 'END-REQUEST'
                             self.do_END_REQUEST()
                             break
-                        else:  # Data remains, send it in the next packet - 'RECEIVE'
+                        else:  # Data remains, send it to the client - 'RECEIVE'
                             self.do_RECEIVE(file_data)
 
     def do_START_REQUEST(self):
         if self._requested_file is None:
             self._requested_file = ftplib.decode(self.packet.content)
+            file_path = os.path.join(ftplib.CONTENT_DIR, self._requested_file)
+            if not os.path.exists(file_path) or not os.path.isfile(file_path):
+                raise ValueError(f"invalid request: '{self._requested_file}' does not exist or is not a valid file.")
             self.packet.reset()
         else:
             raise ValueError('invalid packet: file has already been requested')
@@ -105,5 +108,24 @@ class BinaryFTPServer:  # Server sends binary file specified by client upon requ
 
 
 if __name__ == "__main__":
-    # TODO parse sys.args, cast port# to int, send to startup()
-    BinaryFTPServer().startup()
+    import argparse
+
+    parser = argparse.ArgumentParser(description='Start the FTP server (echo/LAN) on a specific port.')
+    parser.add_argument('--LAN', '--non-local',
+                        help='Specifies LAN server with IPv4 address. If not chosen, defaults to loopback/echo server.',
+                        action='store_true',
+                        default=False)
+    parser.add_argument('-p', '--port', '--server-port',
+                        help='The port number of the listening server socket. Defaults to 64000.',
+                        type=int,
+                        default=ftplib.PORT)
+
+    args = parser.parse_args()
+
+    if args.LAN:
+        host = socket.gethostbyname(socket.gethostname())
+    else:
+        host = ftplib.HOST
+
+    ftp_server = BinaryFTPServer()
+    ftp_server.startup(host, args.port)
